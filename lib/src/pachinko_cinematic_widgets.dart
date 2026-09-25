@@ -54,6 +54,13 @@ class PachinkoCinematicOverlay extends StatelessWidget {
                 progress: progress,
                 reduceMotion: reduceMotion,
               ),
+            if (cue == EffectCue.jackpot)
+              _JackpotSequence(
+                accent: accent,
+                phase: phase,
+                progress: progress,
+                reduceMotion: reduceMotion,
+              ),
           ],
         ),
       ),
@@ -182,7 +189,7 @@ class _ShutterDoors extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final closure = reduceMotion ? 0.72 : _closureFor(progress);
+    final closure = reduceMotion ? 0.82 : _closureFor(progress);
     return LayoutBuilder(
       key: const Key('pachinko-shutter'),
       builder: (context, constraints) {
@@ -220,22 +227,22 @@ class _ShutterDoors extends StatelessWidget {
   }
 
   double _closureFor(double value) {
-    if (value < 0.62) {
+    if (value < 0.55) {
       return Curves.easeInCubic.transform(
-        (value / 0.62).clamp(0.0, 1.0).toDouble(),
+        (value / 0.55).clamp(0.0, 1.0).toDouble(),
       );
     }
-    final reopen = Curves.easeOutExpo.transform(
-      ((value - 0.62) / 0.38).clamp(0.0, 1.0).toDouble(),
-    );
-    return 1 - reopen;
+    // 暗転へ切り替わるまで完全閉鎖を維持し、フェイク失敗の「間」を作る。
+    return 1.0;
   }
 }
 
 class _ImageShutterPanel extends StatelessWidget {
   const _ImageShutterPanel({required this.accent, required this.rightEdge});
+
   final Color accent;
   final bool rightEdge;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -269,9 +276,9 @@ class _ImageShutterPanel extends StatelessWidget {
           Center(
             child: RotatedBox(
               quarterTurns: rightEdge ? 1 : 3,
-              child: Text(
+              child: const Text(
                 'LOCK',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.black,
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -287,73 +294,17 @@ class _ImageShutterPanel extends StatelessWidget {
   }
 }
 
-// Retained for the cinematic shutter variant; currently not wired into the active path.
-// ignore: unused_element
-class _ShutterPanel extends StatelessWidget {
-  const _ShutterPanel({
-    required this.accent,
-    required this.label,
-    required this.rightEdge,
-  });
-  final Color accent;
-  final String label;
-  final bool rightEdge;
-  @override
-  Widget build(BuildContext context) {
-    final border = BorderSide(color: Colors.white, width: 3);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: rightEdge ? Alignment.centerLeft : Alignment.centerRight,
-          end: rightEdge ? Alignment.centerRight : Alignment.centerLeft,
-          colors: [
-            Colors.black,
-            accent.withValues(alpha: 0.76),
-            Colors.white.withValues(alpha: 0.9),
-            accent.withValues(alpha: 0.9),
-            Colors.black,
-          ],
-        ),
-        border: Border(
-          right: rightEdge ? border : BorderSide.none,
-          left: rightEdge ? BorderSide.none : border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.9),
-            blurRadius: 34,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: Center(
-        child: RotatedBox(
-          quarterTurns: rightEdge ? 1 : 3,
-          child: Text(
-            '$label  LOCK  $label',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 4,
-              shadows: [Shadow(color: Colors.white, blurRadius: 4)],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _RevivalBurst extends StatelessWidget {
   const _RevivalBurst({
     required this.accent,
     required this.progress,
     required this.reduceMotion,
   });
+
   final Color accent;
   final double progress;
   final bool reduceMotion;
+
   @override
   Widget build(BuildContext context) {
     final normalized = (progress / 0.22).clamp(0.0, 1.0).toDouble();
@@ -361,6 +312,7 @@ class _RevivalBurst extends StatelessWidget {
         ? 0.12
         : 1 - Curves.easeOut.transform(normalized);
     final ringScale = reduceMotion ? 1.0 : 0.45 + normalized * 1.7;
+
     return Stack(
       key: const Key('pachinko-revival-burst'),
       fit: StackFit.expand,
@@ -371,7 +323,6 @@ class _RevivalBurst extends StatelessWidget {
               alpha: (flash * 0.88).clamp(0.0, 0.88).toDouble(),
             ),
           ),
-        // 画像フラッシュ（リッチ化）
         if (!reduceMotion && flash > 0.05)
           Center(
             child: Opacity(
@@ -408,6 +359,105 @@ class _RevivalBurst extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _JackpotSequence extends StatelessWidget {
+  const _JackpotSequence({
+    required this.accent,
+    required this.phase,
+    required this.progress,
+    required this.reduceMotion,
+  });
+
+  final Color accent;
+  final double phase;
+  final double progress;
+  final bool reduceMotion;
+
+  @override
+  Widget build(BuildContext context) {
+    final impactProgress = (progress / 0.16).clamp(0.0, 1.0).toDouble();
+    final landingProgress = (progress / 0.38).clamp(0.0, 1.0).toDouble();
+    final auraProgress = ((progress - 0.28) / 0.34).clamp(0.0, 1.0).toDouble();
+    final confirmProgress = ((progress - 0.62) / 0.2)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final flash = reduceMotion
+        ? 0.0
+        : (1 - Curves.easeOut.transform(impactProgress)) * 0.76;
+    final ringScale = reduceMotion
+        ? 1.35
+        : 0.4 + Curves.easeOutBack.transform(landingProgress) * 2.1;
+    final rainbow = reduceMotion
+        ? accent
+        : HSVColor.fromAHSV(1, (phase * 360) % 360, 0.82, 1).toColor();
+
+    return Stack(
+      key: const Key('pachinko-jackpot-sequence'),
+      fit: StackFit.expand,
+      children: [
+        if (flash > 0.001)
+          ColoredBox(color: Colors.white.withValues(alpha: flash)),
+        Center(
+          child: Opacity(
+            opacity: (0.14 + auraProgress * 0.5).clamp(0.0, 0.64).toDouble(),
+            child: Transform.scale(
+              scale: ringScale,
+              child: Container(
+                width: 130,
+                height: 130,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: rainbow, width: 5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: rainbow.withValues(alpha: 0.82),
+                      blurRadius: 54,
+                      spreadRadius: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (confirmProgress > 0)
+          Align(
+            alignment: const Alignment(0, 0.62),
+            child: Opacity(
+              opacity: Curves.easeIn.transform(confirmProgress),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: rainbow, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: rainbow.withValues(alpha: 0.72),
+                      blurRadius: 28,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'PREMIUM CONFIRMED',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.6,
+                    shadows: [Shadow(color: rainbow, blurRadius: 14)],
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

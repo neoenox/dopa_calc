@@ -252,6 +252,7 @@ class ResultClimax extends StatelessWidget {
               } else if (lb.contains('CHANCE')) {
                 banner = 'assets/images/chance_banner.png';
               }
+
               if (banner != null) {
                 return Image.asset(
                   banner,
@@ -284,6 +285,7 @@ class ResultClimax extends StatelessWidget {
                   ),
                 );
               }
+
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,

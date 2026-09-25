@@ -238,14 +238,15 @@ class HeadlineCard extends StatelessWidget {
   final bool dark;
 
   bool get _isJackpotImage => beat.cue == EffectCue.jackpot;
-  bool get _isSymbolLockImage => beat.cue == EffectCue.symbolLock;
+  bool get _isSymbolLockImage =>
+      beat.cue == EffectCue.symbolLock &&
+      beat.visualState.symbolStyle == SymbolStyle.seven;
   bool get _isPushImage => beat.cue == EffectCue.pushPrompt;
 
   List<double> _hueMatrix(double degrees) {
     final rad = degrees * math.pi / 180;
     final cosA = math.cos(rad);
     final sinA = math.sin(rad);
-    // hue rotation matrix approx
     return <double>[
       0.213 + 0.787 * cosA - 0.213 * sinA,
       0.715 - 0.715 * cosA - 0.715 * sinA,
@@ -330,7 +331,6 @@ class HeadlineCard extends StatelessWidget {
     final letterSpacing = theme.letterSpacing;
     final tilt = reduceMotion ? 0.0 : math.sin(phase * math.pi * 4) * 0.006;
 
-    // darkビート: 枠線・発光なし、白文字のみ最小表示
     if (dark) {
       return Container(
         constraints: const BoxConstraints(maxWidth: 760),
@@ -361,7 +361,6 @@ class HeadlineCard extends StatelessWidget {
       );
     }
 
-    // 画像化: JACKPOTは虹色脈動、symbolLockは7画像でリッチに（テスト互換の隠しテキストも保持）
     Widget headlineWidget;
     if (_isJackpotImage) {
       final huePulse = reduceMotion ? 0.0 : (phase * 60) % 60;
@@ -463,7 +462,6 @@ class HeadlineCard extends StatelessWidget {
       );
     }
 
-    // PUSHは cinematic overlayのボタンが主役なので、カードは極小でサブタイトルのみに（チープな黒カードを排除）
     if (_isPushImage) {
       return Transform.rotate(
         angle: tilt,
@@ -495,7 +493,7 @@ class HeadlineCard extends StatelessWidget {
         ),
       );
     }
-    // PREMIUM JACKPOTは黒カードをやめて画像をフルスクリーンで見せる（チープ感の主因を除去）
+
     if (_isJackpotImage) {
       return Transform.rotate(
         angle: tilt,
@@ -525,11 +523,11 @@ class HeadlineCard extends StatelessWidget {
                 ],
               ),
             ),
-            // テスト用の見えないテキストは headlineWidget内に既にある
           ],
         ),
       );
     }
+
     if (_isSymbolLockImage) {
       return Transform.rotate(
         angle: tilt,
@@ -558,11 +556,11 @@ class HeadlineCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  shadows: [const Shadow(color: Colors.black, blurRadius: 6)],
+                  shadows: [Shadow(color: Colors.black, blurRadius: 6)],
                 ),
               ),
             ],
@@ -570,6 +568,7 @@ class HeadlineCard extends StatelessWidget {
         ),
       );
     }
+
     return Transform.rotate(
       angle: tilt,
       child: Container(
